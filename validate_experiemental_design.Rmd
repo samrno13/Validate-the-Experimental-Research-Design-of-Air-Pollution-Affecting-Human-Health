@@ -1,0 +1,114 @@
+---
+title: "Validate the Experimental Research Design of Air Pollution Affecting Human Health"
+author: "Samuel Reano"
+output: html_notebook
+---
+
+# Project Overview
+
+We explore the relationship between human health and distance to the nearest source of air pollution using three different regression models. We determine whether these three regression models are good predictors for their respective response variables. Furthermore, we determine whether there was causality in the researcher's experiment.
+
+# Background
+
+A researcher is set to explore the effect of air pollution on human health. For that, the data on 58,648 individuals living in the same country was collected. The hypothesis that the researcher is interested in testing is the effect of distance of a person's residency to the nearest air-polluting facility on individual's health. The problem the researcher faces is a consistent and reliable measure of individual's health status. Since health can be measured in different ways, the researcher collected information on three different measures that reflect individual's health: self-reported health status, weight, and admitted to the hospital at least once during the period of study.
+
+**Variables of the Data:**
+
+- *distance*
+
+- *male*
+
+- *age*
+
+- *health*
+
+- *weight*
+
+- *hospital*
+
+The variable *distance* is numeric and its values are in kilometers. The variable *age* is numeric. The variables *male* and *hospital* are binary (for example, if the individual is a male, then he is assigned the number 1). The variable *weight* is numeric and its values are in kilograms. The values of the variable *health* range from 1 (worst health status) to 10 (best health status). Numbers of this range are based on the responses from the survey participants.
+
+**Loading the Required Packages**
+
+```{r}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, messages = FALSE)
+# Set the graphical theme
+ggplot2::theme_set(ggplot2::theme_light())
+
+# Clear workspace
+rm(list=ls())
+
+library(tidyverse)
+library(AER)
+library(kableExtra)
+library(rio)  
+library(xtable)
+library(foreign)
+library(modelsummary)
+library(readxl)
+```
+
+**Importing the Dataset**
+
+Make sure both the dataset and the R files are in the same directory folder.
+
+```{r}
+Pollution <- read_excel("Pollution.xlsx")
+```
+
+# Estimating the relationship between health and distance to the nearest source of air pollution
+
+**Regression Analysis**
+
+```{r}
+# Regressing healthy on distance
+model1 <- lm(Pollution$healthy ~ Pollution$distance, data = Pollution)
+summary(model1)
+cat("The coefficient for distance is 0.007630 and the intercept is 5.347617. It implies a positive relationship between distance and healthy. The R-squared is 0.000154. This means that 0.02% of the variation in air pollution on human health can be explained by the distance between a person's main residence to the nearest industrial facility and the self-reported health status of the person. The explanatory variable, distance, is not a good predicator for the response variable, healthy.")
+
+# Regressing weight on distance
+model2 <- lm(Pollution$weight ~ Pollution$distance, data = Pollution)
+summary(model2)
+cat("The coefficient for distance is 0.056262 and the intercept is 59.565641. It implies a positive relationship between distance and weight. The R-squared is 0.0005874. This means that 0.06% of the variation in air pollution on human health can be explained by the distance between a person's main residence to the nearest industrial facility and the person's weight. The explanatory variable, distance, is not a good predictor for the response variable, weight.")
+
+# Regressing hospital on distance
+model3 <- lm(Pollution$hospital ~ Pollution$distance, data = Pollution)
+summary(model3)
+cat("The coefficient for distance is -0.0005995 and the intercept is 0.0370296. It implies a negative relationship between distance and hospital. The R-squared is 0.0001627. This means that 0.01% of the variation in air pollution on human health can be explained by the distance between a person's main residence to the nearest industrial facility and the number of people admitted to a hospital. The explanatory variable, distance, is not a good predictor for the response variable, hospital.")
+
+```
+
+# Is the Experimental Design Valid?
+
+It is not safe to argue that the effects estimated in the results of the three regression models reflect the causal effect of pollution on health since R-squared is not sufficient to infer causality and simple correlation estimates do not allow us to infer causality. More statistical analysis is required to infer causality.
+
+# The Elasticity of health with respect to the distance to the nearest source of air pollution
+
+We choose to do a regression on weight and distance because air pollution has been linked to increased human weight and obesity. To calculate the value of elasticity, we must compute the natural logarithm of our variables. We implement the logarithmic transformation on our variables to satisfy the linearity assumption of the regression model. Observe the following regression equation:
+
+$$
+\ln(Y) = \alpha + \beta \ln(X) + \epsilon
+$$
+
+$\alpha$ is the intercept value, $\epsilon$ is the standard error value, and $\beta$ can be interpreted as elasticity. In this regression equation, we say that "$Y$ tends to change by $\beta$ % for a 1% change in $X$ ". So, regression results using logged variables are always interpreted as elasticities.
+
+```{r}
+logweight <- log(Pollution$weight)
+logdistance <- log(Pollution$distance)
+model4 <- lm(logweight ~ logdistance, data = Pollution)
+summary(model4)
+cat("The coefficient for logdistance is 0.011771. That is, the elasticity of health with respect to the distance to nearest source of pollution is approximately 0.011771. In other words, a person's weight (in kilograms) tends to change by 0.01% for a 1% change in the distance (in kilometers) between the person's residency and the nearest air-polluting facility.")
+
+```
+
+The scatter plot of the predicted and actual health status with the Ordinary Least Squares regression line.
+
+```{r}
+ggplot(Pollution) + 
+  aes(y = logweight, x = logdistance) + 
+  geom_point() + 
+  geom_smooth(method = 'lm', se = F) + 
+  labs(title = "Logarithmic weight versus Logarithmic distance",
+       x = "Logarithmic distance",
+       y = "Logarithmic weight")
+```
